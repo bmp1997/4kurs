@@ -77,8 +77,6 @@ DT.import[is.na(Netweight.kg), Year, Netweight.kg.median]
 DT.import$Aug_2014 <- 'до_2014'
 DT.import$Aug_2014[DT.import$Period > 201408] <- 'после_2014'
 unique(DT.import$Aug_2014)
-mnth.f <- as.factor(unique(DT.import$Aug_2014))
-cls <- palette(rainbow(2))
 ```
 
 # Пакет base
@@ -93,17 +91,13 @@ y[y == 0] <- NA
 fit <- lm(y ~ x)
 # график разброса с линией регрессии
 png('Pic-01.png', width = 500, height = 500)
-plot(x, y,
-     xlab = 'Стоимость поставки, долл.США',
-     ylab = 'Масса поставки, кг',
-     main = 'Пакет base',
-     pch = 21, col = rgb(0, 0, 0, alpha = 0.4),
-     bg = cls[as.factor(DT.import$Aug_2014)])
 
-# 2. добавляем прямую регрессии на график
-abline(fit, col = rgb(0, 0, 1), lwd = 2)
-# легенда
-legend('topright', legend = mnth.f, fill = cls[mnth.f])
+coplot(y ~ x | DT.import$Aug_2014,
+       xlab = 'Стоимость поставки, долл.США',
+       ylab = 'Масса поставки, кг',
+       panel = function(x,y,...){
+         points(x,y,...)
+abline(lm(y~x))})
 dev.off()
 ```
 
