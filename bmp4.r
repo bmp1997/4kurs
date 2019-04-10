@@ -1,4 +1,3 @@
-
 # загрузка пакетов
 library('R.utils')               # gunzip() для распаковки архивов 
 library('sp')                    # функция spplot()
@@ -18,7 +17,7 @@ gpclibPermit()
 ShapeFileURL <- "https://biogeo.ucdavis.edu/data/gadm3.6/shp/gadm36_RUS_shp.zip"
 if (!file.exists('./data')) dir.create('./data')
 if (!file.exists('./data/gadm36_RUS_shp.zip')) {
-    download.file(ShapeFileURL, destfile = './data/gadm36_RUS_shp.zip')
+  download.file(ShapeFileURL, destfile = './data/gadm36_RUS_shp.zip')
 }
 # распаковать архив
 unzip('./data/gadm36_RUS_shp.zip', exdir = './data/gadm36_RUS_shp')
@@ -29,37 +28,19 @@ dir('./data/gadm36_RUS_shp')
 Regions0 <- readOGR("./data/gadm36_RUS_shp/gadm36_RUS_0.shp")
 Regions1 <- readOGR("./data/gadm36_RUS_shp/gadm36_RUS_1.shp")
 Regions2 <- readOGR("./data/gadm36_RUS_shp/gadm36_RUS_2.shp")
-    
-# контурные карты для разных уровней иерархии
-par(mfrow = c(1, 3))
-par(oma = c(0, 0, 0, 0))
-par(mar = c(0, 0, 1, 0))
-plot(Regions0, main = 'adm0', asp = 1.8)
-plot(Regions1, main = 'adm1', asp = 1.8)
-plot(Regions2, main = 'adm2', asp = 1.8) 
-par(mfrow = c(1, 1))
-
-# убрать лишние объекты из памяти
-rm(Regions0, Regions2)
-# имена слотов
-slotNames(Regions1)
-# слот "данные"
-Regions1@data
 
 # делаем фактор из имён областей (т.е. нумеруем их)
 Regions1@data$NAME_1 <- as.factor(Regions1@data$NAME_1)
-Regions1@data$NAME_1
 
 # загружаем статистику с показателями по регионам
-fileURL <- 'https://raw.githubusercontent.com/bmp1997/4kurs/laba4/population.csv'
+fileURL <- 'https://raw.githubusercontent.com/bmp1997/4kurs/laba4/population1.csv'
 stat.Regions <- read.csv2(fileURL, stringsAsFactors = F)
-stat.Regions
 stat.Regions$population_2017 <- as.numeric(stat.Regions$population_2017)
 
 # вносим данные в файл карты
 Regions1@data <- merge(Regions1@data, stat.Regions,
                        by.x = 'NAME_1', by.y = 'Region')
-    
+
 # задаём палитру
 mypalette <- colorRampPalette(c('whitesmoke', 'coral3'))
 
@@ -72,27 +53,25 @@ spplot(Regions1, 'population_2017', main = 'Население России по
        # осей
 )
 
-rm(Regions1, stat.Regions)
 
-
-# Муниципальные образования за 2014 год ----
+# Население Северной Осетии за 2018 год ----
 gpclibPermit()
 
-fileURL <- 'https://raw.githubusercontent.com/bmp1997/4kurs/laba4/min_obr.csv'
+fileURL <- 'https://raw.githubusercontent.com/bmp1997/4kurs/laba4/population.csv'
+Regions2@data$NAME_2 <- as.factor(Regions2@data$NAME_2)
 stat.Regions <- read.csv2(fileURL, stringsAsFactors = F)
 
 Regions <- readOGR(dsn = './data/gadm36_RUS_shp', # папка
-                   layer = 'gadm36_RUS_1') # уровень 
-Regions@data$id <- Regions@data$NAME_1
+                   layer = 'gadm36_RUS_2') # уровень 
+Regions@data$id <- Regions@data$NAME_2
+Regions <- Regions[grepl('^RU.NO.', Regions$HASC_2), ]
 Regions.points <- fortify(Regions, region = 'id')
 Regions.df <- merge(Regions.points, Regions@data, by = 'id')
-stat.Regions$id <- stat.Regions$Region
+stat.Regions$id <- stat.Regions$Districts
 Regions.df <- merge(Regions.df,
-                   stat.Regions[, c('id',
-                                    'mun_obr_2014')],
-                   by = 'id')
-
-names(Regions.df)
+                    stat.Regions[, c('id',
+                                     'Population')],
+                    by = 'id')
 
 centroids.df <- as.data.frame(coordinates(Regions))
 centroids.df$id <- Regions@data$id
@@ -102,16 +81,16 @@ colnames(centroids.df) <- c('long', 'lat', 'id')
 gp <- ggplot() +
   geom_polygon(data = Regions.df,
                aes(long, lat, group = group,
-                   fill = mun_obr_2014)) +
+                   fill = Population)) +
   geom_path(data = Regions.df,
             aes(long, lat, group = group),
             color = 'coral4') +
-  coord_map(projection = 'gilbert', orientation = c(90, 0, 100)) +
+  coord_map(projection = 'gilbert') +
   scale_fill_distiller(palette = 'OrRd',
                        direction = 1,
                        breaks = pretty_breaks(n = 5)) +
   labs(x = 'Долгота', y = 'Широта',
-       title = "Количество муниципальных образований")
+       title = "Население Северной Осетии за 2018 год") +
+  geom_text(data = centroids.df,
+            aes(long, lat, label = id))
 gp
-
-  
